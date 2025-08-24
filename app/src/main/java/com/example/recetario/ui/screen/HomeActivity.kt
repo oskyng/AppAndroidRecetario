@@ -1,7 +1,8 @@
 package com.example.recetario.ui.screen
 
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
@@ -15,10 +16,15 @@ import androidx.compose.material3.FloatingActionButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
 import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.example.recetario.data.Receta
@@ -83,17 +89,33 @@ fun MainApp() {
             ) { Icon(Icons.Filled.Add, contentDescription = "Incrementar") }
         }
     ) {
-        innerPadding -> RecipeListUI(recipes = listOfRecipe, contentPadding = innerPadding)
+        padding -> Box(
+            modifier = Modifier.fillMaxSize().padding(padding),
+            contentAlignment = Alignment.Center
+        ) {
+            Column(
+                modifier = Modifier.fillMaxSize().padding(horizontal = 32.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                RecipeListUI(recipes = listOfRecipe)
+            }
+        }
     }
 
 }
 
 @Composable
-fun RecipeListUI(recipes: List<Receta>, contentPadding: PaddingValues) {
+fun RecipeListUI(recipes: List<Receta>) {
+    Text(
+        text = "Lista de Recetas",
+        style = MaterialTheme.typography.headlineSmall,
+        color = Color.Black,
+        modifier = Modifier.semantics { contentDescription = "Subtítulo: Lista de Recetas" }
+    )
     LazyColumn (
         modifier = Modifier
             .fillMaxSize()
-            .padding(contentPadding)
             .padding(horizontal = 16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {

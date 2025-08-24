@@ -32,7 +32,17 @@ fun AppNavigation() {
                 } }
             )
         }
-        composable(Routes.REGISTER) { RegisterApp(onBack = { navController.popBackStack() }) }
-        composable(Routes.FORGOT) { RecoveryPasswordApp(onBack = { navController.popBackStack() }) }
+        composable(Routes.REGISTER) {
+            RegisterApp(
+                onBack = { navController.popBackStack() },
+                onGoLogin = {navController.navigate(Routes.LOGIN)}
+            )
+        }
+        composable(Routes.FORGOT) {
+            RecoveryPasswordApp(
+                onBack = { navController.popBackStack() },
+                onGoLogin = { navController.navigate(Routes.LOGIN) }
+            )
+        }
     }
 }

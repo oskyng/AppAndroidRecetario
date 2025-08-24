@@ -27,11 +27,13 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.contentDescription
@@ -44,12 +46,17 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.recetario.R
+import com.example.recetario.data.Usuario
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun LoginApp(onGoRegister: () -> Unit, onGoForgot: () -> Unit, onGoHome: () -> Unit) {
+    val users = remember { mutableStateListOf<Usuario>() }
+
     var username by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
+    var errorMessage by remember { mutableStateOf("") }
+
     Scaffold (
         topBar = {
             TopAppBar(
@@ -134,15 +141,29 @@ fun LoginApp(onGoRegister: () -> Unit, onGoForgot: () -> Unit, onGoHome: () -> U
                     .semantics { contentDescription = "Campo de contraseña" }
             )
             Button(
-                onClick = { onGoHome() },
-                modifier = Modifier.fillMaxWidth()
+                onClick = {
+                    val userExists = users.any { it.username == username && it.password == password }
+                    if (userExists) {
+                        onGoHome()
+                    } else {
+                        errorMessage = "Credenciales incorrectas"
+                    }
+                },
+                modifier = Modifier.fillMaxWidth().semantics {contentDescription = "Botón para iniciar sesión"}
             ) {
                 Text("Iniciar sesión")
             }
-            TextButton(onClick = onGoRegister, modifier = Modifier.fillMaxWidth()) {
+            if (errorMessage.isNotEmpty()) {
+                Text(
+                    text = errorMessage,
+                    color = Color.Red,
+                    modifier = Modifier.semantics { contentDescription = "Mensaje de error: $errorMessage" }
+                )
+            }
+            TextButton(onClick = onGoRegister, modifier = Modifier.fillMaxWidth().semantics { contentDescription = "Enlace para registrarse" }) {
                 Text("Crear cuenta")
             }
-            TextButton(onClick = onGoForgot, modifier = Modifier.fillMaxWidth()) {
+            TextButton(onClick = onGoForgot, modifier = Modifier.fillMaxWidth().semantics { contentDescription = "Enlace para recuperar contraseña" }) {
                 Text("¿Olvidaste tu contraseña?")
             }
         }
