@@ -10,9 +10,10 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Button
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.FloatingActionButtonDefaults
@@ -26,8 +27,8 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -46,16 +47,18 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.recetario.R
-import com.example.recetario.data.Usuario
+import com.example.recetario.util.SharedState
+import androidx.compose.ui.text.TextStyle
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun LoginApp(onGoRegister: () -> Unit, onGoForgot: () -> Unit, onGoHome: () -> Unit) {
-    val users = remember { mutableStateListOf<Usuario>() }
-
     var username by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var errorMessage by remember { mutableStateOf("") }
+
+    val fontSize by remember { derivedStateOf { SharedState.currentFontSize.sp } }
+    var menuExpanded by remember { mutableStateOf(false) }
 
     Scaffold (
         topBar = {
@@ -63,14 +66,31 @@ fun LoginApp(onGoRegister: () -> Unit, onGoForgot: () -> Unit, onGoHome: () -> U
                 title = {
                     Text("Recetario", fontSize = 20.sp, fontWeight = FontWeight.SemiBold)
                 },
-                navigationIcon = {
-                    IconButton(onClick = { }) {
-                        Icon(imageVector = Icons.Filled.Menu, contentDescription = "Menu")
-                    }
-                },
                 actions = {
-                    IconButton(onClick = {}) {
+                    IconButton(onClick = { menuExpanded = true }) {
                         Icon(imageVector = Icons.Filled.Settings, contentDescription = "Ajustes")
+                    }
+                    DropdownMenu(
+                        expanded = menuExpanded,
+                        onDismissRequest = { menuExpanded = false },
+                        modifier = Modifier.semantics { contentDescription = "Menú de ajustes de fuente" }
+                    ) {
+                        DropdownMenuItem(
+                            text = { Text("Aumentar fuente", fontSize = fontSize) },
+                            onClick = {
+                                SharedState.increaseFontSize()
+                                menuExpanded = false
+                            },
+                            modifier = Modifier.semantics { contentDescription = "Opción para aumentar tamaño de fuente" }
+                        )
+                        DropdownMenuItem(
+                            text = { Text("Reducir fuente", fontSize = fontSize) },
+                            onClick = {
+                                SharedState.decreaseFontSize()
+                                menuExpanded = false
+                            },
+                            modifier = Modifier.semantics { contentDescription = "Opción para reducir tamaño de fuente" }
+                        )
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -124,7 +144,8 @@ fun LoginApp(onGoRegister: () -> Unit, onGoForgot: () -> Unit, onGoHome: () -> U
                 ),
                 modifier = Modifier
                     .fillMaxWidth()
-                    .semantics { contentDescription = "Campo de usuario" }
+                    .semantics { contentDescription = "Campo de usuario" },
+                textStyle = TextStyle(fontSize = fontSize)
             )
             OutlinedTextField(
                 value = password,
@@ -138,11 +159,12 @@ fun LoginApp(onGoRegister: () -> Unit, onGoForgot: () -> Unit, onGoHome: () -> U
                 ),
                 modifier = Modifier
                     .fillMaxWidth()
-                    .semantics { contentDescription = "Campo de contraseña" }
+                    .semantics { contentDescription = "Campo de contraseña" },
+                textStyle = TextStyle(fontSize = fontSize)
             )
             Button(
                 onClick = {
-                    val userExists = users.any { it.username == username && it.password == password }
+                    val userExists = SharedState.users.any { it.username == username && it.password == password }
                     if (userExists) {
                         onGoHome()
                     } else {
@@ -151,20 +173,21 @@ fun LoginApp(onGoRegister: () -> Unit, onGoForgot: () -> Unit, onGoHome: () -> U
                 },
                 modifier = Modifier.fillMaxWidth().semantics {contentDescription = "Botón para iniciar sesión"}
             ) {
-                Text("Iniciar sesión")
+                Text("Iniciar sesión", fontSize = fontSize)
             }
             if (errorMessage.isNotEmpty()) {
                 Text(
                     text = errorMessage,
                     color = Color.Red,
+                    fontSize = fontSize,
                     modifier = Modifier.semantics { contentDescription = "Mensaje de error: $errorMessage" }
                 )
             }
             TextButton(onClick = onGoRegister, modifier = Modifier.fillMaxWidth().semantics { contentDescription = "Enlace para registrarse" }) {
-                Text("Crear cuenta")
+                Text("Crear cuenta", fontSize = fontSize)
             }
             TextButton(onClick = onGoForgot, modifier = Modifier.fillMaxWidth().semantics { contentDescription = "Enlace para recuperar contraseña" }) {
-                Text("¿Olvidaste tu contraseña?")
+                Text("¿Olvidaste tu contraseña?", fontSize = fontSize)
             }
         }
     }

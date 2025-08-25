@@ -15,12 +15,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import com.example.recetario.data.Receta
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun RecipeCard(recipe: Receta) {
+fun RecipeCard(recipe: Receta, fontSize: TextUnit) {
     Card (
         modifier = Modifier.fillMaxWidth().semantics { contentDescription = "Receta: ${recipe.name} - Ingredientes: ${recipe.ingredients} - Instrucciones: ${recipe.instructions}" },
         elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
@@ -33,7 +34,8 @@ fun RecipeCard(recipe: Receta) {
                 text = recipe.name,
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                fontSize = fontSize * 1.1f
             )
             Spacer(modifier = Modifier.height(8.dp))
             Text(
@@ -44,18 +46,21 @@ fun RecipeCard(recipe: Receta) {
             recipe.ingredients.forEach { ingredient ->
                 Text(
                     text = "- $ingredient",
-                    style = MaterialTheme.typography.bodyMedium
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontSize = fontSize * 1.1f
                 )
             }
             Spacer(modifier = Modifier.height(8.dp))
             Text(
                 text = "Instrucciones:",
                 style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.SemiBold
+                fontWeight = FontWeight.SemiBold,
+                fontSize = fontSize * 1.1f
             )
             Text(
                 text = recipe.instructions,
-                style = MaterialTheme.typography.bodyMedium
+                style = MaterialTheme.typography.bodyMedium,
+                fontSize = fontSize * 1.1f
             )
         }
     }

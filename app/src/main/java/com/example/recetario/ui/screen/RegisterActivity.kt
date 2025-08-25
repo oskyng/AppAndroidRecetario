@@ -23,8 +23,8 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -33,13 +33,16 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.example.recetario.data.Usuario
 import com.example.recetario.ui.common.SimpleTopBar
+import com.example.recetario.util.SharedState
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -55,11 +58,12 @@ fun RegisterApp(onBack: () -> Unit, onGoLogin: () -> Unit) {
     var countrySelected by remember { mutableStateOf(countries.first()) }
     var acceptTerms by remember { mutableStateOf(false) }
 
-    val users = remember { mutableStateListOf<Usuario>() }
     var errorMessage by remember { mutableStateOf("") }
 
+    val fontSize by remember { derivedStateOf { SharedState.currentFontSize.sp } }
+
     Scaffold(
-        topBar = { SimpleTopBar(title = "Registro", showBack = true, onBack = onBack) }
+        topBar = { SimpleTopBar(title = "Registro", showBack = true, onBack = onBack, onSettings = {  }) }
     ) {
             padding -> Box(
         modifier = Modifier.fillMaxSize().padding(padding),
@@ -79,6 +83,7 @@ fun RegisterApp(onBack: () -> Unit, onGoLogin: () -> Unit) {
                     keyboardType = KeyboardType.Text,
                     imeAction = ImeAction.Next
                 ),
+                textStyle = TextStyle(fontSize = fontSize),
                 modifier = Modifier.fillMaxWidth().semantics { contentDescription = "Campo para nombres" },
                 colors = TextFieldDefaults.colors(
                     focusedTextColor = Color.Black,
@@ -96,6 +101,7 @@ fun RegisterApp(onBack: () -> Unit, onGoLogin: () -> Unit) {
                     keyboardType = KeyboardType.Text,
                     imeAction = ImeAction.Next
                 ),
+                textStyle = TextStyle(fontSize = fontSize),
                 modifier = Modifier.fillMaxWidth().semantics { contentDescription = "Campo para apellidos" },
                 colors = TextFieldDefaults.colors(
                     focusedTextColor = Color.Black,
@@ -113,6 +119,7 @@ fun RegisterApp(onBack: () -> Unit, onGoLogin: () -> Unit) {
                     keyboardType = KeyboardType.Text,
                     imeAction = ImeAction.Next
                 ),
+                textStyle = TextStyle(fontSize = fontSize),
                 modifier = Modifier.fillMaxWidth().semantics { contentDescription = "Campo para correo electrónico" },
                 colors = TextFieldDefaults.colors(
                     focusedTextColor = Color.Black,
@@ -130,6 +137,7 @@ fun RegisterApp(onBack: () -> Unit, onGoLogin: () -> Unit) {
                     keyboardType = KeyboardType.Text,
                     imeAction = ImeAction.Next
                 ),
+                textStyle = TextStyle(fontSize = fontSize),
                 modifier = Modifier.fillMaxWidth().semantics { contentDescription = "Campo para nombre de usuario" },
                 colors = TextFieldDefaults.colors(
                     focusedTextColor = Color.Black,
@@ -148,6 +156,7 @@ fun RegisterApp(onBack: () -> Unit, onGoLogin: () -> Unit) {
                     keyboardType = KeyboardType.Text,
                     imeAction = ImeAction.Next
                 ),
+                textStyle = TextStyle(fontSize = fontSize),
                 modifier = Modifier.fillMaxWidth().semantics { contentDescription = "Campo para contraseña" },
                 colors = TextFieldDefaults.colors(
                     focusedTextColor = Color.Black,
@@ -166,6 +175,7 @@ fun RegisterApp(onBack: () -> Unit, onGoLogin: () -> Unit) {
                     keyboardType = KeyboardType.Text,
                     imeAction = ImeAction.Next
                 ),
+                textStyle = TextStyle(fontSize = fontSize),
                 modifier = Modifier.fillMaxWidth().semantics { contentDescription = "Campo para confirmar contraseña" },
                 colors = TextFieldDefaults.colors(
                     focusedTextColor = Color.Black,
@@ -186,6 +196,7 @@ fun RegisterApp(onBack: () -> Unit, onGoLogin: () -> Unit) {
                     trailingIcon = {
                         ExposedDropdownMenuDefaults.TrailingIcon(expanded = countryExpanded)
                     },
+                    textStyle = TextStyle(fontSize = fontSize),
                     modifier = Modifier.menuAnchor().fillMaxWidth().semantics { contentDescription = "Campo para seleccionar pais" }
                 )
                 ExposedDropdownMenu(
@@ -194,7 +205,7 @@ fun RegisterApp(onBack: () -> Unit, onGoLogin: () -> Unit) {
                 ) {
                     countries.forEach { country ->
                         DropdownMenuItem(
-                            text = { Text(country) },
+                            text = { Text(country, fontSize = fontSize) },
                             onClick = {
                                 countrySelected = country
                                 countryExpanded = false
@@ -217,10 +228,10 @@ fun RegisterApp(onBack: () -> Unit, onGoLogin: () -> Unit) {
                 Text(
                     text = "Acepto los términos y condiciones",
                     color = Color.Black,
+                    fontSize = fontSize,
                     modifier = Modifier.semantics { contentDescription = "Texto para aceptar términos y condiciones" }
                 )
             }
-            Spacer(modifier = Modifier.height(16.dp))
             Button(
                 onClick = {
                     if (firtsname.isEmpty() || lastname.isEmpty() || email.isEmpty() || username.isEmpty() || password.isEmpty() || confirmPassword.isEmpty()) {
@@ -232,25 +243,26 @@ fun RegisterApp(onBack: () -> Unit, onGoLogin: () -> Unit) {
                     } else if (!acceptTerms) {
                         errorMessage = "Debes aceptar los términos y condiciones"
                     } else {
-                        users.add(Usuario(firtsname, lastname, email, username, password))
+                        SharedState.users.add(Usuario(firtsname, lastname, email, username, password))
                         onGoLogin()
                     }
                 },
                 modifier = Modifier.fillMaxWidth().semantics { contentDescription = "Boton para registrarse" }
             ) {
-                Text("Crear usuario")
+                Text("Crear usuario", fontSize = fontSize)
             }
             if (errorMessage.isNotEmpty()) {
                 Text(
                     text = errorMessage,
                     color = Color.Red,
+                    fontSize = fontSize,
                     modifier = Modifier.semantics { contentDescription = "Mensaje de error: $errorMessage" }
                 )
             }
-            Spacer(modifier = Modifier.height(8.dp))
             Text(
                 text = "Volver a Iniciar Sesión",
                 color = Color(0xFF6200EE),
+                fontSize = fontSize,
                 modifier = Modifier
                     .clickable { onGoLogin() }
                     .semantics { contentDescription = "Enlace para volver a iniciar sesión" }

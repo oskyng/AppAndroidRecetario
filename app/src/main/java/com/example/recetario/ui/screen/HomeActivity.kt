@@ -19,6 +19,9 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.derivedStateOf
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -27,9 +30,11 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.example.recetario.data.Receta
 import com.example.recetario.ui.common.RecipeCard
 import com.example.recetario.ui.common.SimpleTopBar
+import com.example.recetario.util.SharedState
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -74,7 +79,8 @@ fun MainApp() {
                 scope.launch {
                     drawerState.open()
                 }
-            }
+            },
+            onSettings = { }
         ) },
         floatingActionButton = {
             FloatingActionButton(
@@ -107,9 +113,10 @@ fun MainApp() {
 
 @Composable
 fun RecipeListUI(recipes: List<Receta>) {
+    val fontSize by remember { derivedStateOf { SharedState.currentFontSize.sp } }
     Text(
         text = "Lista de Recetas",
-        style = MaterialTheme.typography.headlineSmall,
+        style = MaterialTheme.typography.headlineMedium.copy(fontSize = fontSize * 1.5f),
         color = Color.Black,
         modifier = Modifier.semantics { contentDescription = "Subtítulo: Lista de Recetas" }
     )
@@ -119,7 +126,7 @@ fun RecipeListUI(recipes: List<Receta>) {
             .padding(horizontal = 16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        items(recipes) { recipe -> RecipeCard( recipe = recipe) }
+        items(recipes) { recipe -> RecipeCard( recipe = recipe, fontSize = fontSize) }
     }
 }
 
