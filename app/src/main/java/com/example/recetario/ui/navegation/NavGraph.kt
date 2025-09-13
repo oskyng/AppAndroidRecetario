@@ -26,6 +26,7 @@ import com.example.recetario.ui.screens.RecipeListScreen
 import com.example.recetario.ui.screens.RecoverPasswordScreen
 import com.example.recetario.ui.screens.RegisterScreen
 import com.example.recetario.ui.screens.SettingsScreen
+import com.example.recetario.util.SettingsState
 import java.util.UUID
 
 @Composable
@@ -33,7 +34,9 @@ fun NavGraph(
     modifier: Modifier = Modifier,
     currentUser: User?,
     onUserChange: (User?) -> Unit,
-    onNavControllerCreated: (NavController) -> Unit
+    onNavControllerCreated: (NavController) -> Unit,
+    settingsState: SettingsState,
+    onSettingsStateChange: (SettingsState) -> Unit
 ) {
     val navController = rememberNavController()
     val userRepository: UserRepository = remember { UserRepositoryImpl() }
@@ -118,7 +121,10 @@ fun NavGraph(
             )
         }
         composable(Routes.SETTINGS) {
-            SettingsScreen()
+            SettingsScreen(
+                settingsState = settingsState,
+                onSettingsStateChange = onSettingsStateChange
+            )
         }
         composable(Routes.FAVORITE_RECIPES) {
             FavoritesScreen(

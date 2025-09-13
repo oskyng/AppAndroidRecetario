@@ -1,4 +1,4 @@
-package com.example.myapplication
+package com.example.recetario
 
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -13,56 +13,77 @@ import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.scale
 import androidx.navigation.NavController
 import com.example.recetario.data.model.ChefUser
 import com.example.recetario.data.model.User
 import com.example.recetario.ui.navegation.NavGraph
+import com.example.recetario.ui.navegation.Routes
 import com.example.recetario.ui.theme.RecetarioTheme
+import com.example.recetario.util.SettingsState
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
-            RecetarioTheme {
-                RecetasApp()
+            var settingsState by remember { mutableStateOf(SettingsState()) }
+            var navController by remember { mutableStateOf<NavController?>(null) }
+            var currentUser by remember { mutableStateOf<User?>(null) }
+
+            RecetarioTheme(
+                settingsState = settingsState
+            ) {
+                Scaffold(
+                    bottomBar = {
+                        if (currentUser != null && navController != null) {
+                            BottomNavigationBar(
+                                navController = navController!!,
+                                currentUser = currentUser,
+                                isSimplifiedNavigation = settingsState.isSimplifiedNavigation,
+                                isVerboseTalkBack = settingsState.isVerboseTalkBack,
+                                iconScale = settingsState.iconScale
+                            )
+                        }
+                    }
+                ) { innerPadding ->
+                    NavGraph(
+                        modifier = Modifier.padding(innerPadding),
+                        currentUser = currentUser,
+                        onUserChange = { currentUser = it },
+                        onNavControllerCreated = { navController = it },
+                        settingsState = settingsState,
+                        onSettingsStateChange = { settingsState = it }
+                    )
+                }
             }
         }
     }
 }
 
 @Composable
-fun RecetasApp() {
-    var navController by remember { mutableStateOf<NavController?>(null) }
-    var currentUser by remember { mutableStateOf<User?>(null) }
-
-    Scaffold(
-        bottomBar = {
-            if (currentUser != null && navController != null) {
-                BottomNavigationBar(navController!!, currentUser)
-            }
-        }
-    ) { innerPadding ->
-        NavGraph(
-            modifier = Modifier.padding(innerPadding),
-            currentUser = currentUser,
-            onUserChange = { currentUser = it },
-            onNavControllerCreated = { navController = it }
-        )
-    }
-}
-
-@Composable
-fun BottomNavigationBar(navController: NavController, currentUser: User?) {
+fun BottomNavigationBar(
+    navController: NavController,
+    currentUser: User?,
+    isSimplifiedNavigation: Boolean,
+    isVerboseTalkBack: Boolean,
+    iconScale: Float
+) {
     NavigationBar {
         val currentRoute = navController.currentBackStackEntry?.destination?.route?.substringBefore("/{") ?: ""
 
         NavigationBarItem(
-            icon = { Icon(Icons.Default.List, contentDescription = "Lista de Recetas") },
+            icon = {
+                Icon(
+                    Icons.Default.List,
+                    contentDescription = if (isVerboseTalkBack) "Navegar a la lista de recetas" else "Lista de Recetas",
+                    modifier = Modifier.scale(iconScale)
+                )
+            },
             label = { Text("Recetas") },
-            selected = currentRoute == "recipeList",
+            selected = currentRoute == "recipe",
             onClick = {
                 try {
-                    navController.navigate("recipeList") {
+                    navController.navigate("recipe") {
                         popUpTo(navController.graph.startDestinationId) {
                             saveState = true
                         }
@@ -70,36 +91,25 @@ fun BottomNavigationBar(navController: NavController, currentUser: User?) {
                         restoreState = true
                     }
                 } catch (e: Exception) {
-                    println("Error al navegar a recipeList: ${e.message}")
+                    println("Error al navegar a recipe: ${e.message}")
                 }
             }
         )
-        NavigationBarItem(
-            icon = { Icon(Icons.Default.Favorite, contentDescription = "Recetas Favoritas") },
-            label = { Text("Favoritas") },
-            selected = currentRoute == "favorites",
-            onClick = {
-                try {
-                    navController.navigate("favorites") {
-                        popUpTo(navController.graph.startDestinationId) {
-                            saveState = true
-                        }
-                        launchSingleTop = true
-                        restoreState = true
-                    }
-                } catch (e: Exception) {
-                    println("Error al navegar a favorites: ${e.message}")
-                }
-            }
-        )
-        if (currentUser is ChefUser) {
+
+        if (!isSimplifiedNavigation) {
             NavigationBarItem(
-                icon = { Icon(Icons.Default.Add, contentDescription = "Crear Receta") },
-                label = { Text("Crear") },
-                selected = currentRoute == "createRecipe",
+                icon = {
+                    Icon(
+                        Icons.Default.Favorite,
+                        contentDescription = if (isVerboseTalkBack) "Navegar a las recetas favoritas" else "Recetas Favoritas",
+                        modifier = Modifier.scale(iconScale)
+                    )
+                },
+                label = { Text("Favoritas") },
+                selected = currentRoute == "favorite_recipes",
                 onClick = {
                     try {
-                        navController.navigate("createRecipe") {
+                        navController.navigate("favorite_recipes") {
                             popUpTo(navController.graph.startDestinationId) {
                                 saveState = true
                             }
@@ -107,13 +117,47 @@ fun BottomNavigationBar(navController: NavController, currentUser: User?) {
                             restoreState = true
                         }
                     } catch (e: Exception) {
-                        println("Error al navegar a createRecipe: ${e.message}")
+                        println("Error al navegar a favorite_recipes: ${e.message}")
                     }
                 }
             )
         }
+
+        if (currentUser is ChefUser && !isSimplifiedNavigation) {
+            NavigationBarItem(
+                icon = {
+                    Icon(
+                        Icons.Default.Add,
+                        contentDescription = if (isVerboseTalkBack) "Navegar a crear una nueva receta" else "Crear Receta",
+                        modifier = Modifier.scale(iconScale)
+                    )
+                },
+                label = { Text("Crear") },
+                selected = currentRoute == "create_recipe",
+                onClick = {
+                    try {
+                        navController.navigate("create_recipe") {
+                            popUpTo(navController.graph.startDestinationId) {
+                                saveState = true
+                            }
+                            launchSingleTop = true
+                            restoreState = true
+                        }
+                    } catch (e: Exception) {
+                        println("Error al navegar a create_recipe: ${e.message}")
+                    }
+                }
+            )
+        }
+
         NavigationBarItem(
-            icon = { Icon(Icons.Default.Person, contentDescription = "Perfil") },
+            icon = {
+                Icon(
+                    Icons.Default.Person,
+                    contentDescription = if (isVerboseTalkBack) "Navegar al perfil del usuario" else "Perfil",
+                    modifier = Modifier.scale(iconScale)
+                )
+            },
             label = { Text("Perfil") },
             selected = currentRoute == "profile",
             onClick = {
@@ -130,23 +174,32 @@ fun BottomNavigationBar(navController: NavController, currentUser: User?) {
                 }
             }
         )
-        NavigationBarItem(
-            icon = { Icon(Icons.Default.Settings, contentDescription = "Configuraciones") },
-            label = { Text("Ajustes") },
-            selected = currentRoute == "settings",
-            onClick = {
-                try {
-                    navController.navigate("settings") {
-                        popUpTo(navController.graph.startDestinationId) {
-                            saveState = true
+
+        if (!isSimplifiedNavigation) {
+            NavigationBarItem(
+                icon = {
+                    Icon(
+                        Icons.Default.Settings,
+                        contentDescription = if (isVerboseTalkBack) "Navegar a la pantalla de configuraciones" else "Configuraciones",
+                        modifier = Modifier.scale(iconScale)
+                    )
+                },
+                label = { Text("Ajustes") },
+                selected = currentRoute == "settings",
+                onClick = {
+                    try {
+                        navController.navigate("settings") {
+                            popUpTo(navController.graph.startDestinationId) {
+                                saveState = true
+                            }
+                            launchSingleTop = true
+                            restoreState = true
                         }
-                        launchSingleTop = true
-                        restoreState = true
+                    } catch (e: Exception) {
+                        println("Error al navegar a settings: ${e.message}")
                     }
-                } catch (e: Exception) {
-                    println("Error al navegar a settings: ${e.message}")
                 }
-            }
-        )
+            )
+        }
     }
 }
