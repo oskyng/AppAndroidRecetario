@@ -109,11 +109,8 @@ fun SettingsScreen(
     }
 }
 
-@Preview(showBackground = true, name = "SettingsScreenPreview")
+@Preview(showBackground = true)
 @Composable
 fun SettingsScreenPreview() {
-    SettingsScreen(
-        settingsState = SettingsState(),
-        onSettingsStateChange = {}
-    )
+    MaterialTheme { SettingsScreen(settingsState = SettingsState(), onSettingsStateChange = {}) }
 }

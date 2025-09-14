@@ -16,6 +16,7 @@ import androidx.compose.ui.unit.dp
 import com.example.recetario.data.model.ChefUser
 import com.example.recetario.data.model.RegularUser
 import com.example.recetario.data.model.User
+import java.util.UUID
 
 @Composable
 fun ProfileScreen(
@@ -124,5 +125,13 @@ fun ProfileScreen(
 @Preview(showBackground = true)
 @Composable
 fun GreetingPreviewProfile() {
-    MaterialTheme { ProfileScreen(null) {} }
+    val user = ChefUser(
+        id = UUID.randomUUID().toString(),
+        firstname = "Chef",
+        lastname = "Test",
+        email = "chef@test.com",
+        username = "admin",
+        password = "123qwe"
+    )
+    MaterialTheme { ProfileScreen(user) {} }
 }

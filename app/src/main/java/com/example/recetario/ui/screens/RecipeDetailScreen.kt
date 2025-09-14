@@ -7,8 +7,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.example.recetario.data.model.Recipe
+import com.example.recetario.data.repository.RecipeRepositoryImpl
+import java.util.UUID
 
 @Composable
 fun RecipeDetailScreen(
@@ -48,4 +51,19 @@ fun RecipeDetailScreen(
             )
         }
     }
+}
+
+@Preview(showBackground = true, name = "SettingsScreenPreview")
+@Composable
+fun RecipeDetailScreenPreview() {
+    val recipe = Recipe(
+        id = UUID.randomUUID().toString(),
+        name = "Pasta Carbonara",
+        description = "Deliciosa pasta italiana",
+        ingredients = listOf("Pasta", "Huevo", "Queso", "Panceta"),
+        instructions = listOf("Cocinar pasta", "Mezclar huevos y queso", "Añadir panceta"),
+        category = "Almuerzo",
+        timeMinutes = 20
+    )
+    MaterialTheme { RecipeDetailScreen(recipe, {}) }
 }

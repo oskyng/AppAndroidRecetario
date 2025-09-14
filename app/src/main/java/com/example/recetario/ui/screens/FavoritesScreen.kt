@@ -13,8 +13,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.example.recetario.data.model.Recipe
+import com.example.recetario.data.repository.RecipeRepositoryImpl
 
 @Composable
 fun FavoritesScreen(
@@ -53,4 +55,10 @@ fun FavoritesScreen(
             }
         }
     }
+}
+
+@Preview(showBackground = true, name = "SettingsScreenPreview")
+@Composable
+fun FavoritesScreenPreview() {
+    MaterialTheme { FavoritesScreen(emptyList(), {}) }
 }

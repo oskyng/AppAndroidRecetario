@@ -9,11 +9,15 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.example.recetario.data.model.ChefUser
 import com.example.recetario.data.model.Recipe
 import com.example.recetario.data.model.User
 import com.example.recetario.data.repository.RecipeRepository
+import com.example.recetario.data.repository.RecipeRepositoryImpl
+import com.example.recetario.util.SettingsState
+import java.util.UUID
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -145,7 +149,9 @@ fun CreateRecipeScreen(
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                 modifier = Modifier
                     .fillMaxWidth()
-                    .semantics { contentDescription = "Campo de texto para el tiempo de preparación" },
+                    .semantics {
+                        contentDescription = "Campo de texto para el tiempo de preparación"
+                    },
                 singleLine = true
             )
             Spacer(modifier = Modifier.height(16.dp))
@@ -189,4 +195,18 @@ fun CreateRecipeScreen(
             }
         }
     }
+}
+
+@Preview(showBackground = true, name = "SettingsScreenPreview")
+@Composable
+fun CreateRecipeScreenPreview() {
+    val user = ChefUser(
+        id = UUID.randomUUID().toString(),
+        firstname = "Chef",
+        lastname = "Test",
+        email = "chef@test.com",
+        username = "admin",
+        password = "123qwe"
+    )
+    MaterialTheme { CreateRecipeScreen(null, RecipeRepositoryImpl.INSTANCE, {}) }
 }
