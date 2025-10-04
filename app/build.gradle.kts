@@ -65,10 +65,11 @@ dependencies {
     implementation(libs.androidx.room.runtime)   // runtime obligatorio
     kapt(libs.androidx.room.compiler)            // genera AppDatabase_Impl
     implementation(libs.androidx.room.ktx.v260)       // corrutinas y helpers
-
+    testImplementation(libs.kotlinx.coroutines.test)
 
     // Unit tests
     testImplementation(libs.junit)
     testImplementation(libs.mockito.core)
     testImplementation(libs.mockito.kotlin)
+    testImplementation(kotlin("test"))
 }

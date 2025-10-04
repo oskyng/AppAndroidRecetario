@@ -7,7 +7,7 @@ interface UserRepository {
     fun addUser(user: User)
     fun updateUser(id: String, updatedUser: User)
     fun deleteUser(id: String)
-    fun authenticate(username: String, password: String): User?
+    suspend fun authenticate(username: String, password: String): User?
     fun findUserByUsername(username: String): User?
     fun filterByUserType(userType: String): List<User>
     fun advancedFilter(predicate: (User) -> Boolean): List<User>
