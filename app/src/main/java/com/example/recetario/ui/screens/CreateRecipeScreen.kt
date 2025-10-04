@@ -6,26 +6,26 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import com.example.recetario.data.model.ChefUser
+import com.example.recetario.data.db.AppDatabase
 import com.example.recetario.data.model.Recipe
 import com.example.recetario.data.model.User
-import com.example.recetario.data.repository.RecipeRepository
-import com.example.recetario.data.repository.RecipeRepositoryImpl
-import com.example.recetario.util.SettingsState
-import java.util.UUID
+import com.example.recetario.data.repository.RecetarioRepository
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CreateRecipeScreen(
     user: User?,
-    recipeRepository: RecipeRepository,
+    repository: RecetarioRepository,
     onRecipeCreated: () -> Unit
 ) {
+    val coroutineScope = rememberCoroutineScope()
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -33,7 +33,7 @@ fun CreateRecipeScreen(
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        if (user !is ChefUser) {
+        if (user?.userType != "CHEF") {
             Text(
                 text = "Solo los cocineros profesionales pueden crear recetas",
                 style = MaterialTheme.typography.headlineMedium,
@@ -149,9 +149,7 @@ fun CreateRecipeScreen(
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                 modifier = Modifier
                     .fillMaxWidth()
-                    .semantics {
-                        contentDescription = "Campo de texto para el tiempo de preparación"
-                    },
+                    .semantics { contentDescription = "Campo de texto para el tiempo de preparación" },
                 singleLine = true
             )
             Spacer(modifier = Modifier.height(16.dp))
@@ -167,24 +165,27 @@ fun CreateRecipeScreen(
 
             Button(
                 onClick = {
-                    try {
-                        if (name.isEmpty() || description.isEmpty() || ingredients.isEmpty() || instructions.isEmpty() || timeMinutes.isEmpty()) {
-                            throw IllegalArgumentException("Todos los campos son obligatorios")
+                    coroutineScope.launch {
+                        try {
+                            if (name.isEmpty() || description.isEmpty() || ingredients.isEmpty() || instructions.isEmpty() || timeMinutes.isEmpty()) {
+                                throw IllegalArgumentException("Todos los campos son obligatorios")
+                            }
+                            val recipeTime = timeMinutes.toIntOrNull() ?: throw IllegalArgumentException("Tiempo debe ser un número")
+                            val recipe = Recipe(
+                                name = name,
+                                description = description,
+                                ingredients = ingredients.split(",").map { it.trim() },
+                                instructions = instructions.split(",").map { it.trim() },
+                                category = category,
+                                timeMinutes = recipeTime
+                            )
+                            repository.insertRecipe(recipe)
+                            val updatedUser = user.copy(createdRecipes = user.createdRecipes + recipe.id)
+                            repository.updateUser(updatedUser)
+                            onRecipeCreated()
+                        } catch (e: IllegalArgumentException) {
+                            errorMessage = e.message ?: "Error al crear la receta"
                         }
-                        val recipeTime = timeMinutes.toIntOrNull() ?: throw IllegalArgumentException("Tiempo debe ser un número")
-                        val recipe = Recipe(
-                            name = name,
-                            description = description,
-                            ingredients = ingredients.split(",").map { it.trim() },
-                            instructions = instructions.split(",").map { it.trim() },
-                            category = category,
-                            timeMinutes = recipeTime
-                        )
-                        recipeRepository.addRecipe(recipe)
-                        user.addCreatedRecipe(recipe)
-                        onRecipeCreated()
-                    } catch (e: IllegalArgumentException) {
-                        errorMessage = e.message ?: "Error al crear la receta"
                     }
                 },
                 modifier = Modifier
@@ -197,16 +198,18 @@ fun CreateRecipeScreen(
     }
 }
 
-@Preview(showBackground = true, name = "SettingsScreenPreview")
+@Preview(showBackground = true)
 @Composable
 fun CreateRecipeScreenPreview() {
-    val user = ChefUser(
-        id = UUID.randomUUID().toString(),
-        firstname = "Chef",
-        lastname = "Test",
-        email = "chef@test.com",
-        username = "admin",
-        password = "123qwe"
-    )
-    MaterialTheme { CreateRecipeScreen(null, RecipeRepositoryImpl.INSTANCE, {}) }
+    MaterialTheme {
+        CreateRecipeScreen(
+            user = User(firstname = "Chef", lastname = "Test", email = "chef@test.com", username = "chef_test", password = "Test1234", userType = "CHEF"),
+            repository = RecetarioRepository(
+                AppDatabase.getDatabase(LocalContext.current).recipeDao(),
+                AppDatabase.getDatabase(LocalContext.current).userDao(),
+                AppDatabase.getDatabase(LocalContext.current).favoriteRecipeDao()
+            ),
+            onRecipeCreated = {}
+        )
+    }
 }

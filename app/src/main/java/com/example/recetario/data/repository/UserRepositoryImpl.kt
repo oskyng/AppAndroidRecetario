@@ -1,50 +1,51 @@
 package com.example.recetario.data.repository
 
-import com.example.recetario.data.model.ChefUser
-import com.example.recetario.data.model.RegularUser
 import com.example.recetario.data.model.User
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.runBlocking
 import java.util.UUID
 
-class UserRepositoryImpl : UserRepository {
+class UserRepositoryImpl(private val repository: RecetarioRepository) : UserRepository {
     companion object {
-        val INSTANCE = UserRepositoryImpl()
+        private var instance: UserRepositoryImpl? = null
+
+        fun getInstance(repository: RecetarioRepository): UserRepositoryImpl {
+            return instance ?: synchronized(this) {
+                instance ?: UserRepositoryImpl(repository).also { instance = it }
+            }
+        }
     }
 
-    private val users = mutableListOf<User>().apply {
-        add(
-            ChefUser(
-                id = UUID.randomUUID().toString(),
-                firstname = "Chef",
-                lastname = "Test",
-                email = "chef@test.com",
-                username = "admin",
-                password = "123qwe"
-            )
-        )
+    init {
+        runBlocking {
+            if (repository.getAllUsers().first().isEmpty()) {
+                repository.insertUser(
+                    User(
+                        id = UUID.randomUUID().toString(),
+                        firstname = "Chef",
+                        lastname = "Test",
+                        email = "chef@test.com",
+                        username = "chef_test",
+                        password = "Test1234",
+                        userType = "CHEF"
+                    )
+                )
+            }
+        }
     }
 
-    override fun getAllUsers(): List<User> = users
-
-    override fun clearAllUsers() {
-        users.clear()
-        users.add(
-            ChefUser(
-                id = UUID.randomUUID().toString(),
-                firstname = "Chef",
-                lastname = "Test",
-                email = "chef@test.com",
-                username = "chef_test",
-                password = "Test1234"
-            )
-        )
+    override fun getAllUsers(): List<User> = runBlocking {
+        repository.getAllUsers().first()
     }
 
     override fun addUser(user: User) {
         try {
-            if (users.any { it.username == user.username }) {
-                throw IllegalArgumentException("El usuario ya existe")
+            runBlocking {
+                if (repository.getAllUsers().first().any { it.username == user.username }) {
+                    throw IllegalArgumentException("El usuario ya existe")
+                }
+                repository.insertUser(user)
             }
-            users.addIfNotExists(user)
         } catch (e: IllegalArgumentException) {
             println("Error al añadir usuario: ${e.message}")
             throw e
@@ -53,9 +54,11 @@ class UserRepositoryImpl : UserRepository {
 
     override fun updateUser(id: String, updatedUser: User) {
         try {
-            val index = users.indexOfFirst { it.id == id }
-            if (index == -1) throw IllegalArgumentException("Usuario no encontrado")
-            users[index] = updatedUser
+            runBlocking {
+                val existingUser = repository.getUserById(id)
+                if (existingUser == null) throw IllegalArgumentException("Usuario no encontrado")
+                repository.updateUser(updatedUser.copy(id = id))
+            }
         } catch (e: IllegalArgumentException) {
             println("Error al actualizar usuario: ${e.message}")
             throw e
@@ -64,9 +67,10 @@ class UserRepositoryImpl : UserRepository {
 
     override fun deleteUser(id: String) {
         try {
-            val user = users.find { it.id == id }
-            if (user == null || !users.remove(user)) {
-                throw IllegalArgumentException("Usuario no encontrado")
+            runBlocking {
+                val user = repository.getUserById(id)
+                if (user == null) throw IllegalArgumentException("Usuario no encontrado")
+                repository.deleteUser(user)
             }
         } catch (e: IllegalArgumentException) {
             println("Error al eliminar usuario: ${e.message}")
@@ -79,56 +83,57 @@ class UserRepositoryImpl : UserRepository {
             if (username.isEmpty() || password.isEmpty()) {
                 throw IllegalArgumentException("Usuario o contraseña vacíos")
             }
-            var foundUser: User? = null
-            for (user in users) {
-                if (user.username == username && user.password == password) {
-                    foundUser = user
-                    break
-                }
+            return runBlocking {
+                repository.getAllUsers().first().find { it.username == username && it.password == password }
             }
-            return foundUser
         } catch (e: IllegalArgumentException) {
             println("Error al autenticar: ${e.message}")
             throw e
         }
     }
 
-    override fun findUserByUsername(username: String): User? {
-        var index = 0
-        while (index < users.size) {
-            if (users[index].username == username) return users[index]
-            index++
-        }
-        return null
+    override fun findUserByUsername(username: String): User? = runBlocking {
+        repository.getAllUsers().first().find { it.username == username }
     }
 
     override fun filterByUserType(userType: String): List<User> {
         try {
             if (userType.isEmpty()) throw IllegalArgumentException("Tipo de usuario vacío")
+            return runBlocking {
+                repository.getUsersByType(userType).first().filter {
+                    when (userType) {
+                        "Todas" -> true
+                        "Regular" -> it.userType == "REGULAR"
+                        "Chef" -> it.userType == "CHEF"
+                        else -> false
+                    }
+                }
+            }
         } catch (e: IllegalArgumentException) {
             println("Error: ${e.message}")
             return emptyList()
         }
-
-        val filtered = users.filter {
-            when (userType) {
-                "Todas" -> true
-                "Regular" -> it is RegularUser
-                "Chef" -> it is ChefUser
-                else -> false
-            }
-        }
-
-        filtered.forEach outer@{ user ->
-            if (user.username.isEmpty()) return@outer
-            println(user.username)
-        }
-
-        return filtered
     }
 
-    override fun advancedFilter(predicate: (User) -> Boolean): List<User> {
-        return users.filter(predicate)
+    override fun advancedFilter(predicate: (User) -> Boolean): List<User> = runBlocking {
+        repository.getAllUsers().first().filter(predicate)
+    }
+
+    override fun clearAllUsers() {
+        runBlocking {
+            repository.deleteAllUsers()
+            repository.insertUser(
+                User(
+                    id = java.util.UUID.randomUUID().toString(),
+                    firstname = "Chef",
+                    lastname = "Test",
+                    email = "chef@test.com",
+                    username = "chef_test",
+                    password = "Test1234",
+                    userType = "CHEF"
+                )
+            )
+        }
     }
 
     fun logUsersByType(userType: String) {
@@ -140,8 +145,8 @@ class UserRepositoryImpl : UserRepository {
         }
         val filtered = advancedFilter {
             when (userType) {
-                "Regular" -> it is RegularUser
-                "Chef" -> it is ChefUser
+                "Regular" -> it.userType == "REGULAR"
+                "Chef" -> it.userType == "CHEF"
                 else -> true
             }
         }

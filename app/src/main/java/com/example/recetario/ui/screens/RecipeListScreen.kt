@@ -10,31 +10,33 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import com.example.recetario.data.db.AppDatabase
 import com.example.recetario.data.model.Recipe
+import com.example.recetario.data.model.User
+import com.example.recetario.data.repository.RecetarioRepository
 import com.example.recetario.data.repository.RecipeRepository
 import com.example.recetario.data.repository.RecipeRepositoryImpl
+import kotlinx.coroutines.launch
 import java.util.UUID
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun RecipeListScreen(
-    repository: RecipeRepository,
-    favoriteRecipes: List<Recipe>,
-    onAddToFavorites: (Recipe) -> Unit,
-    onRemoveFromFavorites: (Recipe) -> Unit,
+    repository: RecetarioRepository,
+    currentUser: User?,
     onNavigateToDetail: (String) -> Unit
 ) {
+    val coroutineScope = rememberCoroutineScope()
     var selectedCategory by remember { mutableStateOf("Todas") }
     var expanded by remember { mutableStateOf(false) }
     val categories = listOf("Todas", "Desayuno", "Almuerzo", "Ensalada", "Postre")
-
-    val filteredRecipes = remember(selectedCategory) {
-        repository.filterByCategory(selectedCategory)
-    }
+    val recipes by repository.getAllRecipes().collectAsState(initial = emptyList())
+    val favoriteRecipes by currentUser?.let { repository.getFavoriteRecipes(it.id) }?.collectAsState(initial = emptyList()) ?: mutableStateOf(emptyList())
 
     Column(
         modifier = Modifier
@@ -83,12 +85,20 @@ fun RecipeListScreen(
         Spacer(modifier = Modifier.height(16.dp))
 
         LazyColumn {
-            items(filteredRecipes) { recipe ->
+            items(recipes.filter { if (selectedCategory == "Todas") true else it.category == selectedCategory }) { recipe ->
                 RecipeItem(
                     recipe = recipe,
                     isFavorite = favoriteRecipes.contains(recipe),
-                    onAddToFavorites = { onAddToFavorites(recipe) },
-                    onRemoveFromFavorites = { onRemoveFromFavorites(recipe) },
+                    onAddToFavorites = {
+                        currentUser?.let {
+                            coroutineScope.launch { repository.addFavorite(it.id, recipe.id) }
+                        }
+                    },
+                    onRemoveFromFavorites = {
+                        currentUser?.let {
+                            coroutineScope.launch { repository.removeFavorite(it.id, recipe.id) }
+                        }
+                    },
                     onClick = { onNavigateToDetail(recipe.id) }
                 )
                 Spacer(modifier = Modifier.height(8.dp))
@@ -158,5 +168,15 @@ fun RecipeItem(
 @Preview(showBackground = true)
 @Composable
 fun RecipeListScreenPreview() {
-    MaterialTheme { RecipeListScreen(RecipeRepositoryImpl.INSTANCE, emptyList(), {}, {}, {}) }
+    MaterialTheme {
+        RecipeListScreen(
+            repository = RecetarioRepository(
+                AppDatabase.getDatabase(LocalContext.current).recipeDao(),
+                AppDatabase.getDatabase(LocalContext.current).userDao(),
+                AppDatabase.getDatabase(LocalContext.current).favoriteRecipeDao()
+            ),
+            currentUser = null,
+            onNavigateToDetail = {}
+        )
+    }
 }

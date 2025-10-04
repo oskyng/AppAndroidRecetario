@@ -5,14 +5,17 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.navigation.NavController
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import com.example.recetario.data.db.AppDatabase
 import com.example.recetario.data.model.Recipe
 import com.example.recetario.data.model.User
+import com.example.recetario.data.repository.RecetarioRepository
 import com.example.recetario.data.repository.RecipeRepository
 import com.example.recetario.data.repository.RecipeRepositoryImpl
 import com.example.recetario.data.repository.UserRepository
@@ -27,6 +30,8 @@ import com.example.recetario.ui.screens.RecoverPasswordScreen
 import com.example.recetario.ui.screens.RegisterScreen
 import com.example.recetario.ui.screens.SettingsScreen
 import com.example.recetario.util.SettingsState
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
 import java.util.UUID
 
 @Composable
@@ -39,21 +44,31 @@ fun NavGraph(
     onSettingsStateChange: (SettingsState) -> Unit
 ) {
     val navController = rememberNavController()
-    val userRepository: UserRepository = remember { UserRepositoryImpl() }
-    val recipes = remember {
-        mutableStateListOf<Recipe>(
-            Recipe(id = UUID.randomUUID().toString(), name = "Pasta Carbonara", description = "Deliciosa pasta italiana", ingredients = listOf("Pasta", "Huevo", "Queso", "Panceta"), instructions = listOf("Cocinar pasta", "Mezclar huevos y queso", "Añadir panceta"), category = "Almuerzo", timeMinutes = 20),
-            Recipe(id = UUID.randomUUID().toString(), name = "Ensalada César", description = "Ensalada fresca con aderezo", ingredients = listOf("Lechuga", "Pollo", "Croutons", "Aderezo"), instructions = listOf("Lavar lechuga", "Cocinar pollo", "Mezclar aderezo"), category = "Ensalada", timeMinutes = 15),
-            Recipe(id = UUID.randomUUID().toString(), name = "Tacos al Pastor", description = "Tacos mexicanos tradicionales", ingredients = listOf("Cerdo", "Piña", "Cilantro", "Cebolla"), instructions = listOf("Marinar cerdo", "Asar carne", "Servir con piña"), category = "Almuerzo", timeMinutes = 30),
-            Recipe(id = UUID.randomUUID().toString(), name = "Panqueques", description = "Desayuno esponjoso", ingredients = listOf("Harina", "Leche", "Huevos"), instructions = listOf("Mezclar ingredientes", "Cocinar en sartén"), category = "Desayuno", timeMinutes = 10),
-            Recipe(id = UUID.randomUUID().toString(), name = "Tarta de Manzana", description = "Postre clásico", ingredients = listOf("Manzanas", "Masa", "Azúcar"), instructions = listOf("Preparar masa", "Cortar manzanas", "Hornear"), category = "Postre", timeMinutes = 45)
+    val context = LocalContext.current
+    val repository = remember {
+        RecetarioRepository(
+            AppDatabase.getDatabase(context).recipeDao(),
+            AppDatabase.getDatabase(context).userDao(),
+            AppDatabase.getDatabase(context).favoriteRecipeDao()
         )
     }
-    val favoriteRecipes = remember { mutableStateListOf<Recipe>() }
-    val recipeRepository: RecipeRepository = remember { RecipeRepositoryImpl(recipes) }
 
-    LaunchedEffect(navController) {
+    LaunchedEffect(Unit) {
         onNavControllerCreated(navController)
+        // Inicializar recetas si la base de datos está vacía
+        launch {
+            if (repository.getAllRecipes().first().isEmpty()) {
+                repository.insertAllRecipes(
+                    listOf(
+                        Recipe(id = java.util.UUID.randomUUID().toString(), name = "Pasta Carbonara", description = "Deliciosa pasta italiana", ingredients = listOf("Pasta", "Huevo", "Queso", "Panceta"), instructions = listOf("Cocinar pasta", "Mezclar huevos y queso", "Añadir panceta"), category = "Almuerzo", timeMinutes = 20),
+                        Recipe(id = java.util.UUID.randomUUID().toString(), name = "Ensalada César", description = "Ensalada fresca con aderezo", ingredients = listOf("Lechuga", "Pollo", "Croutons", "Aderezo"), instructions = listOf("Lavar lechuga", "Cocinar pollo", "Mezclar aderezo"), category = "Ensalada", timeMinutes = 15),
+                        Recipe(id = java.util.UUID.randomUUID().toString(), name = "Tacos al Pastor", description = "Tacos mexicanos tradicionales", ingredients = listOf("Cerdo", "Piña", "Cilantro", "Cebolla"), instructions = listOf("Marinar cerdo", "Asar carne", "Servir con piña"), category = "Almuerzo", timeMinutes = 30),
+                        Recipe(id = java.util.UUID.randomUUID().toString(), name = "Panqueques", description = "Desayuno esponjoso", ingredients = listOf("Harina", "Leche", "Huevos"), instructions = listOf("Mezclar ingredientes", "Cocinar en sartén"), category = "Desayuno", timeMinutes = 10),
+                        Recipe(id = java.util.UUID.randomUUID().toString(), name = "Tarta de Manzana", description = "Postre clásico", ingredients = listOf("Manzanas", "Masa", "Azúcar"), instructions = listOf("Preparar masa", "Cortar manzanas", "Hornear"), category = "Postre", timeMinutes = 40)
+                    )
+                )
+            }
+        }
     }
 
     NavHost(
@@ -71,28 +86,26 @@ fun NavGraph(
                 },
                 onRegisterClick = { navController.navigate(Routes.REGISTER) },
                 onRecoverPasswordClick = { navController.navigate(Routes.FORGOT) },
-                userRepository = userRepository
+                repository = repository
             )
         }
         composable(Routes.REGISTER) {
             RegisterScreen(
                 onRegisterSuccess = { navController.navigate(Routes.LOGIN) },
                 onBackToLogin = { navController.navigate(Routes.LOGIN) },
-                userRepository = userRepository
+                repository = repository
             )
         }
         composable(Routes.FORGOT) {
             RecoverPasswordScreen(
-                userRepository = userRepository,
+                repository = repository,
                 onBackToLogin = { navController.navigate(Routes.LOGIN) }
             )
         }
         composable(Routes.HOME) {
             RecipeListScreen(
-                repository = recipeRepository,
-                favoriteRecipes = favoriteRecipes,
-                onAddToFavorites = { recipe -> favoriteRecipes.add(recipe) },
-                onRemoveFromFavorites = { recipe -> favoriteRecipes.remove(recipe) },
+                repository = repository,
+                currentUser = currentUser,
                 onNavigateToDetail = { recipeId ->
                     navController.navigate("recipe_detail/$recipeId")
                 }
@@ -103,15 +116,16 @@ fun NavGraph(
             arguments = listOf(navArgument("recipeId") { type = NavType.StringType })
         ) { backStackEntry ->
             val recipeId = backStackEntry.arguments?.getString("recipeId") ?: ""
-            val recipe = recipeRepository.findRecipeById(recipeId)
             RecipeDetailScreen(
-                recipe = recipe,
+                recipeId = recipeId,
+                repository = repository,
                 onBack = { navController.popBackStack() }
             )
         }
         composable(Routes.PROFILE) {
             ProfileScreen(
                 user = currentUser,
+                repository = repository,
                 onLogout = {
                     onUserChange(null)
                     navController.navigate(Routes.LOGIN) {
@@ -128,14 +142,17 @@ fun NavGraph(
         }
         composable(Routes.FAVORITE_RECIPES) {
             FavoritesScreen(
-                favoriteRecipes = favoriteRecipes,
-                onRemoveFromFavorites = { recipe -> favoriteRecipes.remove(recipe) }
+                repository = repository,
+                currentUser = currentUser,
+                onNavigateToDetail = { recipeId ->
+                    navController.navigate("recipe_detail/$recipeId")
+                }
             )
         }
         composable(Routes.CREATE_RECIPE) {
             CreateRecipeScreen(
                 user = currentUser,
-                recipeRepository = recipeRepository,
+                repository = repository,
                 onRecipeCreated = { navController.navigate(Routes.HOME) }
             )
         }

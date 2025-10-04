@@ -14,11 +14,12 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
+import androidx.compose.ui.platform.LocalContext
 import androidx.navigation.NavController
-import com.example.recetario.data.model.ChefUser
+import com.example.recetario.data.db.AppDatabase
 import com.example.recetario.data.model.User
+import com.example.recetario.data.repository.RecetarioRepository
 import com.example.recetario.ui.navegation.NavGraph
-import com.example.recetario.ui.navegation.Routes
 import com.example.recetario.ui.theme.RecetarioTheme
 import com.example.recetario.util.SettingsState
 
@@ -29,6 +30,14 @@ class MainActivity : ComponentActivity() {
             var settingsState by remember { mutableStateOf(SettingsState()) }
             var navController by remember { mutableStateOf<NavController?>(null) }
             var currentUser by remember { mutableStateOf<User?>(null) }
+            val context = LocalContext.current
+            val repository = remember {
+                RecetarioRepository(
+                    AppDatabase.getDatabase(context).recipeDao(),
+                    AppDatabase.getDatabase(context).userDao(),
+                    AppDatabase.getDatabase(context).favoriteRecipeDao()
+                )
+            }
 
             RecetarioTheme(
                 settingsState = settingsState
@@ -123,7 +132,7 @@ fun BottomNavigationBar(
             )
         }
 
-        if (currentUser is ChefUser && !isSimplifiedNavigation) {
+        if (currentUser?.userType == "CHEF" && !isSimplifiedNavigation) {
             NavigationBarItem(
                 icon = {
                     Icon(

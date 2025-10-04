@@ -19,17 +19,20 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.example.recetario.R
+import com.example.recetario.data.db.AppDatabase
 import com.example.recetario.data.model.User
-import com.example.recetario.data.repository.UserRepository
+import com.example.recetario.data.repository.RecetarioRepository
 import com.example.recetario.data.repository.UserRepositoryImpl
+import kotlinx.coroutines.launch
 
 @Composable
 fun LoginScreen(
     onLoginSuccess: (User) -> Unit,
     onRegisterClick: () -> Unit,
     onRecoverPasswordClick: () -> Unit,
-    userRepository: UserRepository
+    repository: RecetarioRepository
 ) {
+    val coroutineScope = rememberCoroutineScope()
     var username by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var errorMessage by remember { mutableStateOf("") }
@@ -88,15 +91,17 @@ fun LoginScreen(
 
         Button(
             onClick = {
-                try {
-                    val user = userRepository.authenticate(username, password)
-                    if (user != null) {
-                        onLoginSuccess(user)
-                    } else {
-                        errorMessage = "Usuario o contraseña incorrectos"
+                coroutineScope.launch {
+                    try {
+                        val user = UserRepositoryImpl.getInstance(repository).authenticate(username, password)
+                        if (user != null) {
+                            onLoginSuccess(user)
+                        } else {
+                            errorMessage = "Usuario o contraseña incorrectos"
+                        }
+                    } catch (e: IllegalArgumentException) {
+                        errorMessage = e.message ?: "Error al autenticar"
                     }
-                } catch (e: IllegalArgumentException) {
-                    errorMessage = e.message ?: "Error al autenticar"
                 }
             },
             modifier = Modifier
@@ -140,5 +145,5 @@ fun LoginScreen(
 @Preview(showBackground = true)
 @Composable
 fun GreetingPreview() {
-    MaterialTheme { LoginScreen({}, {}, {}, UserRepositoryImpl.INSTANCE) }
+    MaterialTheme { LoginScreen({}, {}, {}, RecetarioRepository(AppDatabase.getDatabase(androidx.compose.ui.platform.LocalContext.current).recipeDao(), AppDatabase.getDatabase(androidx.compose.ui.platform.LocalContext.current).userDao(), AppDatabase.getDatabase(androidx.compose.ui.platform.LocalContext.current).favoriteRecipeDao())) }
 }

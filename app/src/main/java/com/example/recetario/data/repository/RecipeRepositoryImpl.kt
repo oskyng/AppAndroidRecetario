@@ -1,24 +1,32 @@
 package com.example.recetario.data.repository
 
 import com.example.recetario.data.model.Recipe
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.runBlocking
 
-class RecipeRepositoryImpl(private val recipes: MutableList<Recipe>): RecipeRepository {
+class RecipeRepositoryImpl(private val repository: RecetarioRepository): RecipeRepository {
     companion object {
-        val INSTANCE = RecipeRepositoryImpl(mutableListOf())
+        private var instance: RecipeRepositoryImpl? = null
+
+        fun getInstance(repository: RecetarioRepository): RecipeRepositoryImpl {
+            return instance ?: synchronized(this) {
+                instance ?: RecipeRepositoryImpl(repository).also { instance = it }
+            }
+        }
     }
 
-    override fun getAllRecipes(): List<Recipe> = recipes
-
-    override fun clearAllRecipes() {
-        recipes.clear()
+    override fun getAllRecipes(): List<Recipe> = runBlocking {
+        repository.getAllRecipes().first()
     }
 
     override fun addRecipe(recipe: Recipe) {
         try {
-            if (recipes.any { it.id == recipe.id }) {
-                throw IllegalArgumentException("La receta ya existe")
+            runBlocking {
+                if (repository.getAllRecipes().first().any { it.id == recipe.id }) {
+                    throw IllegalArgumentException("La receta ya existe")
+                }
+                repository.insertRecipe(recipe)
             }
-            recipes.addIfNotExists(recipe)
         } catch (e: IllegalArgumentException) {
             println("Error al añadir receta: ${e.message}")
             throw e
@@ -27,9 +35,11 @@ class RecipeRepositoryImpl(private val recipes: MutableList<Recipe>): RecipeRepo
 
     override fun updateRecipe(id: String, updatedRecipe: Recipe) {
         try {
-            val index = recipes.indexOfFirst { it.id == id }
-            if (index == -1) throw IllegalArgumentException("Receta no encontrada")
-            recipes[index] = updatedRecipe
+            runBlocking {
+                val existingRecipe = repository.getRecipeById(id)
+                if (existingRecipe == null) throw IllegalArgumentException("Receta no encontrada")
+                repository.updateRecipe(updatedRecipe.copy(id = id))
+            }
         } catch (e: IllegalArgumentException) {
             println("Error al actualizar receta: ${e.message}")
             throw e
@@ -38,9 +48,10 @@ class RecipeRepositoryImpl(private val recipes: MutableList<Recipe>): RecipeRepo
 
     override fun deleteRecipe(id: String) {
         try {
-            val recipe = recipes.find { it.id == id }
-            if (recipe == null || !recipes.remove(recipe)) {
-                throw IllegalArgumentException("Receta no encontrada")
+            runBlocking {
+                val recipe = repository.getRecipeById(id)
+                if (recipe == null) throw IllegalArgumentException("Receta no encontrada")
+                repository.deleteRecipe(recipe)
             }
         } catch (e: IllegalArgumentException) {
             println("Error al eliminar receta: ${e.message}")
@@ -48,35 +59,34 @@ class RecipeRepositoryImpl(private val recipes: MutableList<Recipe>): RecipeRepo
         }
     }
 
-    override fun findRecipeById(id: String): Recipe? {
-        var index = 0
-        while (index < recipes.size) {
-            if (recipes[index].id == id) return recipes[index]
-            index++
-        }
-        return null
+    override fun findRecipeById(id: String): Recipe? = runBlocking {
+        repository.getRecipeById(id)
     }
 
     override fun filterByCategory(category: String): List<Recipe> {
         try {
             if (category.isEmpty()) throw IllegalArgumentException("Categoría vacía")
+            return measureTime {
+                runBlocking {
+                    repository.getAllRecipes().first().filter {
+                        if (category == "Todas") true else it.category == category
+                    }
+                }
+            }
         } catch (e: IllegalArgumentException) {
             println("Error: ${e.message}")
             return emptyList()
         }
-
-        val filtered = recipes.filter { if (category == "Todas") true else it.category == category }
-
-        filtered.forEach outer@{ recipe ->
-            if (recipe.name.isEmpty()) return@outer
-            println(recipe.name)
-        }
-
-        return measureTime { filtered }
     }
 
-    override fun advancedFilter(predicate: (Recipe) -> Boolean): List<Recipe> {
-        return recipes.filter(predicate)
+    override fun advancedFilter(predicate: (Recipe) -> Boolean): List<Recipe> = runBlocking {
+        repository.getAllRecipes().first().filter(predicate)
+    }
+
+    override fun clearAllRecipes() {
+        runBlocking {
+            repository.deleteAllRecipes()
+        }
     }
 
     inline fun <reified T> measureTime(block: () -> T): T {

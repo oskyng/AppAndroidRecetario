@@ -15,18 +15,19 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import com.example.recetario.data.model.ChefUser
-import com.example.recetario.data.model.RegularUser
+import com.example.recetario.data.db.AppDatabase
 import com.example.recetario.data.model.User
-import com.example.recetario.data.repository.UserRepository
+import com.example.recetario.data.repository.RecetarioRepository
 import com.example.recetario.data.repository.UserRepositoryImpl
+import kotlinx.coroutines.launch
 
 @Composable
 fun RegisterScreen(
     onRegisterSuccess: () -> Unit,
     onBackToLogin: () -> Unit,
-    userRepository: UserRepository
+    repository: RecetarioRepository
 ) {
+    val coroutineScope = rememberCoroutineScope()
     var firstname by remember { mutableStateOf("") }
     var lastname by remember { mutableStateOf("") }
     var username by remember { mutableStateOf("") }
@@ -165,22 +166,28 @@ fun RegisterScreen(
 
         Button(
             onClick = {
-                try {
-                    if (firstname.isEmpty() || lastname.isEmpty() || username.isEmpty() || password.isEmpty() || confirmPassword.isEmpty() || email.isEmpty()) {
-                        throw IllegalArgumentException("Todos los campos son obligatorios")
+                coroutineScope.launch {
+                    try {
+                        if (firstname.isEmpty() || lastname.isEmpty() || username.isEmpty() || password.isEmpty() || confirmPassword.isEmpty() || email.isEmpty()) {
+                            throw IllegalArgumentException("Todos los campos son obligatorios")
+                        }
+                        if (password != confirmPassword) {
+                            throw IllegalArgumentException("Las contraseñas no coinciden")
+                        }
+                        val user = User(
+                            firstname = firstname,
+                            lastname = lastname,
+                            email = email,
+                            username = username,
+                            password = password,
+                            userType = userType.uppercase(),
+                            receiveNewsletter = receiveNewsletter
+                        )
+                        UserRepositoryImpl.getInstance(repository).addUser(user)
+                        onRegisterSuccess()
+                    } catch (e: IllegalArgumentException) {
+                        errorMessage = e.message ?: "Error al registrar"
                     }
-                    if (password != confirmPassword) {
-                        throw IllegalArgumentException("Las contraseñas no coinciden")
-                    }
-                    val user: User = when (userType) {
-                        "Regular" -> RegularUser(firstname = firstname, lastname = lastname, email = email, username = username, password = password, receiveNewsletter = receiveNewsletter)
-                        "Chef" -> ChefUser(firstname = firstname, lastname = lastname, email = email, username = username, password = password)
-                        else -> throw IllegalArgumentException("Tipo de usuario inválido")
-                    }
-                    userRepository.addUser(user)
-                    onRegisterSuccess()
-                } catch (e: IllegalArgumentException) {
-                    errorMessage = e.message ?: "Error al registrar"
                 }
             },
             modifier = Modifier
@@ -210,5 +217,5 @@ fun RegisterScreen(
 @Preview(showBackground = true)
 @Composable
 fun GreetingPreviewRegister() {
-    MaterialTheme { RegisterScreen({}, {}, UserRepositoryImpl.INSTANCE) }
+    MaterialTheme { RegisterScreen({}, {}, RecetarioRepository(AppDatabase.getDatabase(androidx.compose.ui.platform.LocalContext.current).recipeDao(), AppDatabase.getDatabase(androidx.compose.ui.platform.LocalContext.current).userDao(), AppDatabase.getDatabase(androidx.compose.ui.platform.LocalContext.current).favoriteRecipeDao())) }
 }
